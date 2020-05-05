@@ -40,17 +40,7 @@ int main(int argc, char const *argv[])
         perror("bind failed"); 
         exit(EXIT_FAILURE); 
     } 
-    if (listen(server_fd, 3) < 0) 
-    { 
-        perror("listen"); 
-        exit(EXIT_FAILURE); 
-    } 
-    if ((new_socket = accept(server_fd, (struct sockaddr *)&address,  
-                       (socklen_t*)&addrlen))<0) 
-    { 
-        perror("accept"); 
-        exit(EXIT_FAILURE); 
-    } 
+   
     
     // Privilege required for socket creation and binding. 
     // Following part requires less privileges. 
@@ -68,16 +58,29 @@ int main(int argc, char const *argv[])
             perror("Privilege dropping failed");
             exit(EXIT_FAILURE);
         }
+		if (listen(server_fd, 3) < 0) 
+	    	{ 
+		perror("listen"); 
+		exit(EXIT_FAILURE); 
+	    	} 
+	    if ((new_socket = accept(server_fd, (struct sockaddr *)&address,  
+		               (socklen_t*)&addrlen))<0) 
+	    { 
+		perror("accept"); 
+		exit(EXIT_FAILURE); 
+	    } 
 
-    //child process processing the data
-    valread = read( new_socket , buffer, 1024); 
-    printf("%s\n",buffer ); 
-    send(new_socket , hello , strlen(hello) , 0 ); 
-    printf("Hello message sent\n"); 
- }
-    else {        
-        int status = 0;
-        while ((wait(&status)) > 0);
+	    //child process processing the data
+	    valread = read( new_socket , buffer, 1024); 
+	    printf("%s\n",buffer ); 
+	    send(new_socket , hello , strlen(hello) , 0 ); 
+	    printf("Hello message sent\n"); 
+    }
+   
+    else {  
+	      
+        int stat = 0;
+        while ((wait(&stat)) > 0);   //Parent Waiting for child exit
     }     
     return 0; 
 } 
