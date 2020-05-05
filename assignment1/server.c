@@ -52,6 +52,8 @@ int main(int argc, char const *argv[])
         exit(EXIT_FAILURE); 
     } 
     
+    // Privilege required for socket creation and binding. 
+    // Following part requires less privileges. 
 	
     //Child process creation for privilege separation
     pid_t child = fork();
