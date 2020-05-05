@@ -51,9 +51,31 @@ int main(int argc, char const *argv[])
         perror("accept"); 
         exit(EXIT_FAILURE); 
     } 
+    
+	
+    //Child process creation for privilege separation
+    pid_t child = fork();
+
+    if (child < 0) {                        //Error handling 
+        perror("Child process creation failed");
+        exit(EXIT_FAILURE);
+    }
+    else if (child == 0) {
+	
+        if(setuid(65534) < 0){           // Dropping privilege
+            perror("Privilege dropping failed");
+            exit(EXIT_FAILURE);
+        }
+
+    //child process processing the data
     valread = read( new_socket , buffer, 1024); 
     printf("%s\n",buffer ); 
     send(new_socket , hello , strlen(hello) , 0 ); 
     printf("Hello message sent\n"); 
+ }
+    else {        
+        int status = 0;
+        while ((wait(&status)) > 0);
+    }     
     return 0; 
 } 
