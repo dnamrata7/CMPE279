@@ -12,9 +12,32 @@ int main(int argc, char const *argv[])
     struct sockaddr_in address; 
     int opt = 1; 
     int addrlen = sizeof(address); 
-    char buffer[1024] = {0}; 
+    char buffer[1024] = {0};
     char *hello = "Hello from server"; 
        
+    // Code for exec-ed process
+
+    if(argc > 1)
+    {
+	   
+	if(setuid(65534) < 0) {           // Dropping privilege
+            perror("Privilege dropping failed");
+            exit(EXIT_FAILURE);
+        }      
+	//reading the socket id sent
+	server_fd = atoi(argv[1]);
+
+	// exec-ed process processing the data & sending the message
+	    valread = read( server_fd , buffer, 1024); 
+	    printf("%s\n",buffer ); 
+	    send(server_fd , hello , strlen(hello) , 0 ); 
+	    printf("Hello message sent\n"); 
+    }
+
+    else {
+
+    // Entering in parent process 
+
     // Creating socket file descriptor 
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) 
     { 
@@ -40,11 +63,24 @@ int main(int argc, char const *argv[])
         perror("bind failed"); 
         exit(EXIT_FAILURE); 
     } 
-   
     
-    // Privilege required for socket creation and binding. 
-    // Following part requires less privileges. 
+   if (listen(server_fd, 3) < 0) 
+	    { 
+		perror("listen"); 
+		exit(EXIT_FAILURE); 
+	    } 
+  	if ((new_socket = accept(server_fd, (struct sockaddr *)&address,  
+		               (socklen_t*)&addrlen))<0) 
+	    { 
+		perror("accept"); 
+		exit(EXIT_FAILURE); 
+	    } 
+
+
 	
+    /* The separation should start from here as data processing does not    need any privilege.
+    */
+ 
     //Child process creation for privilege separation
     pid_t child = fork();
 
@@ -54,33 +90,30 @@ int main(int argc, char const *argv[])
     }
     else if (child == 0) {
 	
-        if(setuid(65534) < 0){           // Dropping privilege
-            perror("Privilege dropping failed");
-            exit(EXIT_FAILURE);
-        }
-		if (listen(server_fd, 3) < 0) 
-	    	{ 
-		perror("listen"); 
-		exit(EXIT_FAILURE); 
-	    	} 
-	    if ((new_socket = accept(server_fd, (struct sockaddr *)&address,  
-		               (socklen_t*)&addrlen))<0) 
-	    { 
-		perror("accept"); 
-		exit(EXIT_FAILURE); 
-	    } 
+      
+	
+	//converting socket descriptor to string
+	char server_fd_string[11];
+	sprintf(server_fd_string, "%d", new_socket);
 
-	    //child process processing the data
-	    valread = read( new_socket , buffer, 1024); 
-	    printf("%s\n",buffer ); 
-	    send(new_socket , hello , strlen(hello) , 0 ); 
-	    printf("Hello message sent\n"); 
+	//Passing arguments to new exec-ed process (Image process)
+
+	char *args[] = {"./server", server_fd_string, NULL};
+
+	//execvp : Takes file as an argument
+	if (execvp(args[0], args) < 0) 
+	{
+        	perror("execvp execution failed!");
+        	exit(EXIT_FAILURE);
+    	}
+	    
     }
    
     else {  
 	      
         int stat = 0;
         while ((wait(&stat)) > 0);   //Parent Waiting for child exit
-    }     
+    }
+}     
     return 0; 
 } 
